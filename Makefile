@@ -15,6 +15,10 @@ CA_CERT_REQ_FILE = $(CATOP)/reqs/ca.csr
 CA_CERT_KEY_FILE = $(CATOP)/private/ca.key
 CA_CERT_FILE = $(CATOP)/certs/ca.crt
 
+SUBCA_CERT_REQ_FILE = $(CATOP)/reqs/subca.csr
+SUBCA_CERT_KEY_FILE = $(CATOP)/private/subca.key
+SUBCA_CERT_FILE = $(CATOP)/certs/subca.crt
+
 CRL_LINK = $(CATOP)/crl/crl.pem
 CRL_FILE = $(CATOP)/crl/crl$(shell cat $(CATOP)/crlnumber).pem
 
@@ -37,6 +41,8 @@ help:
 	@echo "init   - Create & initialize ca directory."
 	@echo "careq  - Create certificate request of CA."
 	@echo "cacert - Sign certificate request of CA."
+	@echo "subcareq  - Create certificate request of Subortinate (Issuing) CA."
+	@echo "subcacert - Sign certificate request of Subortinate (Issuing) CA."
 	@echo "req    - Create certificate request."
 	@echo "cert   - Sign specified certificate request."
 	@echo "verify - Verify specified certificate."
@@ -103,6 +109,28 @@ $(CA_CERT_FILE): $(CA_CERT_REQ_FILE)
 		$(NULL)
 	chmod 644 $(CA_CERT_FILE)
 
+
+subcareq: $(CATOP) $(SUBCA_CERT_REQ_FILE)
+
+$(SUBCA_CERT_REQ_FILE): $(SUBCA_CERT_KEY_FILE)
+	chmod 600 $(SUBCA_CERT_REQ_FILE)
+$(SUBCA_CERT_KEY_FILE):
+	$(REQ) -new -keyout $(SUBCA_CERT_KEY_FILE) \
+		-out $(SUBCA_CERT_REQ_FILE) \
+		$(NULL)
+	chmod 600 $(SUBCA_CERT_KEY_FILE)
+
+subcacert: subcareq
+	$(MAKE) $(SUBCA_CERT_FILE)
+
+$(SUBCA_CERT_FILE): $(SUBCA_CERT_REQ_FILE)
+	$(CA) -out $(SUBCA_CERT_FILE) $(CADAYS) -batch \
+		-keyfile $(SUBCA_CERT_KEY_FILE) -selfsign \
+		-extensions v3_ca \
+		-infiles $(SUBCA_CERT_REQ_FILE) \
+		$(NULL)
+	chmod 644 $(SUBCA_CERT_FILE)
+
 req: $(CATOP)
 	$(MAKE) $(CERT_KEY_FILE)
 	$(MAKE) $(CERT_REQ_FILE)
@@ -147,4 +175,8 @@ clean:
 		$(CERT_REQ_FILE) \
 		$(CERT_KEY_FILE) \
 		$(CERT_FILE) \
+		$(SUBCERT_REQ_FILE) \
+		$(SUBCERT_KEY_FILE) \
+		$(SUBCERT_FILE) \
 		$(NULL)
+
