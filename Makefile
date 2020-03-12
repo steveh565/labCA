@@ -4,8 +4,9 @@ CATOP = $(PWD)/ca
 CACONF = $(CATOP)/../ca.conf
 
 OPENSSL = openssl
-DAYS = -days 3652
+DAYS = -days 365
 CADAYS = -days 3652
+SUBCADAYS = -days 365
 REQ = $(OPENSSL) req -config $(CACONF)
 CA = $(OPENSSL) ca -config $(CACONF)
 VERIFY = $(OPENSSL) verify
@@ -124,10 +125,10 @@ subcacert: subcareq
 	$(MAKE) $(SUBCA_CERT_FILE)
 
 $(SUBCA_CERT_FILE): $(SUBCA_CERT_REQ_FILE)
-	$(CA) -out $(SUBCA_CERT_FILE) $(CADAYS) -batch \
-		-keyfile $(SUBCA_CERT_KEY_FILE) -selfsign \
-		-extensions v3_ca \
-		-infiles $(SUBCA_CERT_REQ_FILE) \
+	$(X509) -req -in $(SUBCA_CERT_REQ_FILE) \
+		-CA $(CA_CERT_FILE) -CAkey $(CA_CERT_KEY_FILE) \
+		-extensions v3_ca $(SUBCADAYS) -CAcreateserial \
+		-out $(SUBCA_CERT_FILE) \
 		$(NULL)
 	chmod 644 $(SUBCA_CERT_FILE)
 
@@ -171,12 +172,5 @@ $(CATOP)/crlnumber:
 	echo 01 > $@
 
 clean:
-	$(RM) \
-		$(CERT_REQ_FILE) \
-		$(CERT_KEY_FILE) \
-		$(CERT_FILE) \
-		$(SUBCERT_REQ_FILE) \
-		$(SUBCERT_KEY_FILE) \
-		$(SUBCERT_FILE) \
+	$(RM) -rf $(CATOP) \
 		$(NULL)
-
